@@ -1,3 +1,6 @@
+import concurrent.futures
+import threading
+import time
 
 from bs4 import BeautifulSoup
 import requests
@@ -10,15 +13,15 @@ Rows_global=0
 
 def scrape(collections_id, start_page=1):
     counter = 0
-    global data, TM_number_Url_Data_p_Text
-    global Rows_global
-    global Rows
+    data=[]
+
+
     Rows=0
     data = []
     url = f'https://www.trismegistos.org/coll/detail.php?coll_id={collections_id}&charttype=1&language=&material=&p=1'
     response = requests.get(url)
     soup = BeautifulSoup(response.content, 'lxml')
-    global Number_Of_Pages
+    Number_Of_Pages=0
     try:
         Number_Of_Pages = int(soup.find('span', style="padding: 0 6px 0 3px").text.replace('Page 1 of ', ''))
     except:
@@ -38,7 +41,7 @@ def scrape(collections_id, start_page=1):
         for item in soup.find_all('tr')[1:]:
             subpage_progress += 1
             Rows+=1
-            Rows_global+=1
+
             TMnumber_Html = item.find('td', class_='TM_id')
             Collection_Html = item.find('td', class_='mus')
             Material_Html = item.find('td', class_='mat')
@@ -46,6 +49,7 @@ def scrape(collections_id, start_page=1):
             Century_Html = item.find('td', class_='cent')
             Publication_Html = item.find('td', class_='publ')
             print("main data scraped")
+            time.sleep(1)
             TM_number_Url = 'https://www.trismegistos.org' + TMnumber_Html.a.get('href')[
                                                              2:] if TMnumber_Html and TMnumber_Html.a else None
 
@@ -103,15 +107,23 @@ def scrape(collections_id, start_page=1):
             New_data = []
             New_data_name = []
 
-            for string in TM_number_Url_Data_p_Text:  # loop through each string in the original list
+            for string in TM_number_Url_Data_p_Text:
+                i=0 # loop through each string in the original list
                 for word in words_to_remove:  # loop through each word to remove
                     if word in string:
+                        if i>1:
+                            break
+                        i+=1
+
 
                         string = string.replace(word, '')  # remove the word from the string
                         for data_number in range(len(words_to_remove)):
-                            if (word == words_to_remove[data_number]):
-                                New_data.append(string)
-                                New_data_name.append(word)
+                            try:
+                                if (word == words_to_remove[data_number]):
+                                    New_data.append(string)
+                                    New_data_name.append(word)
+                            except:
+                                pass
             data.append({
                 'TM Link': TM_number_Url,
                 'TM number': TMnumber_Html.text if TMnumber_Html else None,
@@ -149,7 +161,7 @@ def scrape(collections_id, start_page=1):
 def save(scrapped, file_name):
     df = pd.DataFrame(scrapped)
 
-    desktop_path = os.path.expanduser("~/Desktop")
+    desktop_path = os.path.expanduser("~/Desktop/collections")
 
     file_path = os.path.join(desktop_path, f'{file_name}.xlsx')
     df.to_excel(file_path, index=False)
@@ -164,7 +176,21 @@ with open('allcollections.txt') as f:
 
 print(all_collections)
 
-words_to_remove = ["Provenance:", "Content (beta!):", "Recto/Verso:",'Culture']
-for Collection_id in collections:
+words_to_remove = ["Provenance:", "Content (beta!):", "Recto/Verso:"]
+def scrape_and_save(Collection_id):
     print(f'starting collection {Collection_id}')
-    save(scrape(int(Collection_id)), f'collection {Collection_id}')
+    data = scrape(int(Collection_id))
+    save(data, f'collection {Collection_id}')
+    time.sleep(1)
+
+
+with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
+    # Queue up tasks for each collection ID
+    futures = [executor.submit(scrape_and_save, Collection_id) for Collection_id in all_collections]
+
+    # Wait for all tasks to complete
+    for future in concurrent.futures.as_completed(futures):
+        try:
+            result = future.result()
+        except Exception as e:
+            print(f'Error occurred: {str(e)}')

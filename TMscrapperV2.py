@@ -156,10 +156,15 @@ def save(scrapped, file_name):
     print(f"Excel file saved to: {file_path}")
 
 
-collections = [4150,903,5,1540,1434,1125,1213,1547,1388,434,540,1352,1046,1589,1317,1206,1301,1302,1377,1308,849,1559,1224,915,13,1405,857,1753,3851,1601,392,69,3858,3703,70,71,3610,72,3934,73,1149,4356,3696,74,1408,75,76,403,3628,1323,3753,4382,527,1173,542,485,1223,1085,1596,1036,1899,484,1222,648,1337,1453,1154,77,1701,1446,950,1901,4353,649,78,825,4344,432,3634,3924,1795,1175,1288,3837,1170,1164,1186,1331,1752,916,4082,1185,600,1711,1073,4270,1518,216,3311,1333,1182,3850,1168,3840,307,811,451,4464,1523, 4078,
-]
+
+with open('allcollections.txt') as f:
+    data=f.read()
+    all_collections=data.split(',')
+
+
+print(all_collections)
 
 words_to_remove = ["Provenance:", "Content (beta!):", "Recto/Verso:",'Culture']
 for Collection_id in collections:
     print(f'starting collection {Collection_id}')
-    save(scrape(Collection_id), f'collection {Collection_id}')
+    save(scrape(int(Collection_id)), f'collection {Collection_id}')

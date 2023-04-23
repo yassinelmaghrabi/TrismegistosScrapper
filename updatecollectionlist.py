@@ -1,7 +1,6 @@
 from bs4 import BeautifulSoup
 import requests
-import pandas as pd
-import os
+
 data = []
 url = 'https://www.trismegistos.org/coll/list_all.php'
 response = requests.get(url)
